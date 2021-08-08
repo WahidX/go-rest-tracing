@@ -2,11 +2,9 @@ package rest
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/wahidx/go-rest-sample/internal/tracing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -14,35 +12,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func NewRouter() http.Handler {
-	tp, err := tracing.TracerProvider()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Register our TracerProvider as the global so any imported
-	// instrumentation in the future will default to using it.
-	otel.SetTracerProvider(tp)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Cleanly shutdown and flush telemetry when the application exits.
-	defer func(ctx context.Context) {
-		// Do not make the application hang when it is shutdown.
-		ctx, cancel = context.WithTimeout(ctx, time.Second*5)
-		defer cancel()
-		if err := tp.Shutdown(ctx); err != nil {
-			log.Fatal(err)
-		}
-	}(ctx)
-
-	tracer := tp.Tracer("global-tracer")
-
-	ctx, span := tracer.Start(ctx, "foo")
-	defer span.End()
-
-	bar(ctx)	// dummy trace span
+func NewRouter(ctx context.Context) http.Handler {
+	sleepSpan(ctx, 20)	// dummy trace span
+	sleepSpan(ctx, 10)
 
 	// http routers
 	r := chi.NewRouter()
@@ -55,12 +27,18 @@ func NewRouter() http.Handler {
 	return r
 }
 
-func bar(ctx context.Context) {
+func sleepSpan(ctx context.Context, val int) {
 	// Use the global TracerProvider.
-	tr := otel.Tracer("global-tracer")
-	_, span := tr.Start(ctx, "bar")
-	span.SetAttributes(attribute.Key("testset").String("value"))
+	tr := otel.Tracer("bar-tracer"+fmt.Sprint(val))
+	_, span := tr.Start(ctx, "bar-span"+fmt.Sprint(val))
+	span.SetAttributes(attribute.Key("sleep-duration").String(fmt.Sprint(val)))	// testset: value => this key-val pair will be visible in jaeger under tags
+	span.SetName("span-name")
 	defer span.End()
 
-	// Do bar...
+	sleepMs(val)
+}
+
+func sleepMs(val int) {
+	time.Sleep(time.Duration(val) * time.Millisecond)
+	fmt.Println("done")
 }

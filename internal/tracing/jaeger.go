@@ -44,7 +44,7 @@ func TracerProvider() (*tracesdk.TracerProvider, error) {
 		// Record information about this application in an Resource.
 		tracesdk.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			// semconv.ServiceNameKey.String(service),
+			semconv.ServiceNameKey.String(service),
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		)),
