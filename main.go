@@ -13,9 +13,6 @@ import (
 )
 
 func main() {
-	//check for port
-	port := "8000"
-
 	//Tracer init
 	tp, err := tracing.TracerProvider()
 	if err != nil {
@@ -45,6 +42,9 @@ func main() {
 	defer span.End()
 
 	router := rest.NewRouter(ctx)
+
+	//check for port
+	port := "8000"
 
 	fmt.Println("Listening to port:", port)
 	http.ListenAndServe(":"+port, router)
